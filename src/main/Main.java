@@ -18,7 +18,7 @@ public class Main {
 		SecureRandom random = new SecureRandom();
 		for (int i = 0; i<1000000;i++) {
 			int A = random.nextInt(1000000);
-			String B = "abcdef";
+			String B = String.format("%06d", i);
 			res.append(A +" " + B + "\n");
 		}
 		try {
