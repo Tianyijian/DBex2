@@ -1,11 +1,16 @@
 package bPlusTree;
 
+import java.util.LinkedList;
+import java.util.Queue;
+
 public class BPlusTree<T, V extends Comparable<V>> {
 	//
 	private Integer bTreeOrder;
 	// B+树的非叶子点最大拥有的节点数量，也是键的数量
 	private Integer maxNumber;
 
+	private Integer minNumber;
+	
 	private Node<T, V> root;
 
 	private LeafNode<T, V> left;
@@ -18,6 +23,7 @@ public class BPlusTree<T, V extends Comparable<V>> {
 		super();
 		this.bTreeOrder = bTreeOrder;
 		this.maxNumber = bTreeOrder + 1;
+		this.minNumber = Double.valueOf(Math.ceil(bTreeOrder / 2.0)).intValue();
 		this.root = new LeafNode<T, V>();
 		this.left = null;
 	}
@@ -42,11 +48,34 @@ public class BPlusTree<T, V extends Comparable<V>> {
 		if (key == null) {
 			return;
 		}
-		Node<T,V> t = this.root.insert(value, key);
+		Node<T,V> t = this.root.insert(value, key); 
 		if (t!=null) {
 			this.root = t;
 		}
 		this.left = (LeafNode<T, V>)this.root.refreshLeft();
+	}
+	
+	public void print() {
+		Queue<Node<T, V>> quene = new LinkedList<BPlusTree<T,V>.Node<T,V>>();
+		quene.add(this.root);
+		int num = 1;
+		int num2 = 0;
+		while(!quene.isEmpty()) {
+			for (int j = 0; j < num;j++) {
+				Node<T, V> head = quene.poll();
+				num2 += head.number;
+				for (int i = 0; i < head.number;i++) {
+					System.out.print(head.keys[i]+ " ");
+					if (head.childs[i] != null) {
+						quene.add(head.childs[i]);
+					}
+				}
+				System.out.print("-->");
+			}
+			System.out.println();
+			num = num2;
+			num2 = 0;
+		}
 	}
 	
 	
@@ -74,6 +103,7 @@ public class BPlusTree<T, V extends Comparable<V>> {
 		abstract Node<T, V> insert(T value, V key);
 		
 		abstract LeafNode<T, V> refreshLeft();
+		
 	}
 	
 
@@ -156,6 +186,16 @@ public class BPlusTree<T, V extends Comparable<V>> {
 			if (this.number <= bTreeOrder) {
 				System.arraycopy(tempKeys, 0, this.keys, 0, this.number);
 				System.arraycopy(tempChilds, 0, this.childs, 0, this.number);
+				
+				// 有可能需要更新父节点的边界值
+				Node node = this;
+				while (node.parent != null) {
+					V tempKey = (V) node.keys[node.number - 1];
+					if (tempKey.compareTo((V) node.parent.keys[node.parent.number - 1]) > 0) {	
+						node.parent.keys[node.parent.number - 1] = tempKey;
+					} 
+					node = node.parent; // TODO
+				}
 				return null;
 			}
 			int middle = this.number / 2;
@@ -185,7 +225,6 @@ public class BPlusTree<T, V extends Comparable<V>> {
 			BPlusNode<T, V> parentNode = (BPlusNode<T, V>) this.parent;
 			return parentNode.insertNode(this, tempNode, oldKey);
 		}
-
 
 
 	}
@@ -261,10 +300,8 @@ public class BPlusTree<T, V extends Comparable<V>> {
 					V tempKey = (V) node.keys[node.number - 1];
 					if (tempKey.compareTo((V) node.parent.keys[node.parent.number - 1]) > 0) {	
 						node.parent.keys[node.parent.number - 1] = tempKey;
-						node = node.parent; // TODO
-					} else {	//TODO
-						break;
-					}
+					} 
+					node = node.parent; // TODO
 				}
 				return null;
 			}
