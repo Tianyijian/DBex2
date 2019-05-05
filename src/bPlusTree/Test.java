@@ -65,7 +65,8 @@ public class Test {
 //				System.out.println(str[0]);
 //				System.out.println(str[1]);
 				a[i] = Integer.valueOf(str[0]);
-				if (str[1].equals("000146")) {
+				System.out.println(a[i]);
+				if (str[1].equals("000147")) {
 					b.print();
 					System.out.println("------------");
 				}
@@ -78,10 +79,10 @@ public class Test {
 			e.printStackTrace();
 		}
 //		b.print();
-		for (int i = 0; i < a.length; i++) {
-			String  r = b.find(a[i]);
-			System.out.println(r);
-		}
+//		for (int i = 0; i < a.length; i++) {
+//			String  r = b.find(a[i]);
+//			System.out.println(r);
+//		}
 	}
 	
 	public static void test4() {
