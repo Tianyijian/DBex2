@@ -8,13 +8,15 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.Arrays;
 
+import main.Record;
+
 public class Sort {
 
 	private final static int RECORD_NUM = 1000000;
-	private final static int BLOCK_SIZE = 250000;
-	private final static int LIST_NUMBER = RECORD_NUM / BLOCK_SIZE;
-	private static int[] inputBuffer = new int[LIST_NUMBER];
-	private static int[] outputBuffer = new int[BLOCK_SIZE];
+	private final static int BLOCK_SIZE = 62500;
+	private final static int LIST_NUMBER = RECORD_NUM / BLOCK_SIZE; // 16
+	private static Record[] inputBuffer = new Record[LIST_NUMBER];
+	private static Record[] outputBuffer = new Record[BLOCK_SIZE];
 
 	public static void main(String[] args) {
 		phrase1();
@@ -38,7 +40,7 @@ public class Sort {
 				for (int i = 0; i < BLOCK_SIZE; i++) {
 					String line = br.readLine();
 					String[] str = line.split(" ");
-					outputBuffer[i] = Integer.valueOf(str[0]);
+					outputBuffer[i] = new Record(Integer.valueOf(str[0]), str[1]);
 				}
 				// 进行排序
 				long time2 = System.currentTimeMillis();
@@ -60,7 +62,7 @@ public class Sort {
 	}
 
 	private static String getFileName(int k) {
-		return "src/sort/sorted" + k + ".txt";
+		return "src/sort/sorted_" + k + ".txt";
 	}
 
 	public static void phase2() throws IOException {
@@ -73,12 +75,14 @@ public class Sort {
 		// 初始化bufferReader 以及输入缓冲区
 		for (int k = 0; k < LIST_NUMBER; k++) {
 			br[k] = new BufferedReader(new FileReader(new File(getFileName(k))));
-			inputBuffer[k] = Integer.valueOf(br[k].readLine());
+			String line = br[k].readLine();
+			String[] str = line.split(" ");
+			inputBuffer[k] = new Record(Integer.valueOf(str[0]), str[1]);
 		}
 		while (total < RECORD_NUM) {
 			// 选择输入缓冲区中最小的填充到输出缓冲区
 			int index = minInBuffer();
-			outputBuffer[count] = inputBuffer[index];
+			copy(outputBuffer[count], inputBuffer[index]);
 			count++;
 			total++;
 			// 输出缓冲区已满, 写到文件
@@ -89,12 +93,12 @@ public class Sort {
 			// 从外部文件继续读取一个记录到缓冲区
 			String line = "";
 			if ((line = br[index].readLine()) != null) {
-				inputBuffer[index] = Integer.valueOf(line);
+				inputBuffer[index].setValue(line);
 			} else {
 				// 该文件读完,从其它外部文件读入
 				for (i = 0; i < LIST_NUMBER; i++) {
 					if ((line = br[i].readLine()) != null) {
-						inputBuffer[index] = Integer.valueOf(line);
+						inputBuffer[index].setValue(line);
 						break;
 					}
 				}
@@ -103,7 +107,7 @@ public class Sort {
 			if (i >= LIST_NUMBER) { // 此时仅剩输入缓冲区中的记录,直接排序，写到文件
 				Arrays.sort(inputBuffer);
 				for (int j = 1; j < LIST_NUMBER; j++) {
-					outputBuffer[BLOCK_SIZE - LIST_NUMBER + j] = inputBuffer[j];
+					copy(outputBuffer[BLOCK_SIZE - LIST_NUMBER + j], inputBuffer[j]);
 					count++;
 					total++;
 				}
@@ -124,15 +128,26 @@ public class Sort {
 	 * @return
 	 */
 	private static int minInBuffer() {
-		int min = inputBuffer[0];
+		int min = inputBuffer[0].getKey();
 		int minIndex = 0;
 		for (int k = 1; k < LIST_NUMBER; k++) {
-			if (inputBuffer[k] < min) {
-				min = inputBuffer[k];
+			if (inputBuffer[k].getKey() < min) {
+				min = inputBuffer[k].getKey();
 				minIndex = k;
 			}
 		}
 		return minIndex;
+	}
+
+	/**
+	 * 将记录B的值赋值给记录A
+	 * 
+	 * @param A
+	 * @param B
+	 */
+	private static void copy(Record A, Record B) {
+		A.setKey(B.getKey());
+		A.setContent(B.getContent());
 	}
 
 	/**
@@ -145,7 +160,7 @@ public class Sort {
 			FileOutputStream out = new FileOutputStream(new File(path), true);
 			BufferedOutputStream bout = new BufferedOutputStream(out);
 			for (int j = 0; j < BLOCK_SIZE; j++) {
-				bout.write((outputBuffer[j] + "\n").getBytes());
+				bout.write((outputBuffer[j].toString() + "\n").getBytes());
 			}
 			bout.flush();
 			bout.close();
