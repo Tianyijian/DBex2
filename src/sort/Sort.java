@@ -14,23 +14,22 @@ public class Sort {
 
 	private final static int RECORD_NUM = 1000000;
 	private final static int BLOCK_SIZE = 62500;
+//	private final static int BLOCK_SIZE = 31250;
 	private final static int LIST_NUMBER = RECORD_NUM / BLOCK_SIZE; // 16
 	private static Record[] inputBuffer = new Record[LIST_NUMBER];
 	private static Record[] outputBuffer = new Record[BLOCK_SIZE];
 
-	public static void main(String[] args) {
-		phrase1();
-		try {
-			phase2();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+	public static void main(String[] args) throws IOException {
+		split();
+		merge();
+//		testQuickSort();
 	}
 
 	/**
-	 * 重复四次，每次1MB的记录
+	 * 将大文件分割成小文件，进行排序
+	 * 
 	 */
-	public static void phrase1() {
+	public static void split() {
 		try {
 			BufferedReader br = new BufferedReader(new FileReader(new File("src/main/data.txt")));
 			long start = System.currentTimeMillis();
@@ -44,7 +43,8 @@ public class Sort {
 				}
 				// 进行排序
 				long time2 = System.currentTimeMillis();
-				Arrays.sort(outputBuffer);
+//				Arrays.sort(outputBuffer);
+				quickSort(outputBuffer, 0, outputBuffer.length - 1);
 				long time3 = System.currentTimeMillis();
 				// 输出到文件
 				writeFile(getFileName(k));
@@ -53,7 +53,7 @@ public class Sort {
 						time4 - time3);
 			}
 			long end = System.currentTimeMillis();
-			System.out.printf("Total time: %d ms\n", end - start);
+			System.out.printf("Split time: %d ms\n", end - start);
 			br.close();
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -65,8 +65,15 @@ public class Sort {
 		return "src/sort/sorted_" + k + ".txt";
 	}
 
-	public static void phase2() throws IOException {
+	/**
+	 * 合并阶段，将排好序的小文件进行归并
+	 * 
+	 * @throws IOException
+	 */
+	public static void merge() throws IOException {
 		String outFile = "src/sort/result.txt";
+		FileOutputStream out = new FileOutputStream(new File(outFile), true); // 追加方式
+		BufferedOutputStream bout = new BufferedOutputStream(out);
 		BufferedReader[] br = new BufferedReader[LIST_NUMBER];
 		int i = 0;
 		int total = 0; // 总共写入的记录数
@@ -88,7 +95,7 @@ public class Sort {
 			// 输出缓冲区已满, 写到文件
 			if (count >= BLOCK_SIZE) {
 				count = 0;
-				writeFile(outFile);
+				writeResult(bout);
 			}
 			// 从外部文件继续读取一个记录到缓冲区
 			String line = "";
@@ -98,6 +105,7 @@ public class Sort {
 				// 该文件读完,从其它外部文件读入
 				for (i = 0; i < LIST_NUMBER; i++) {
 					if ((line = br[i].readLine()) != null) {
+						br[index] = br[i]; // 将读完的reader指针切换到未读完的reader上
 						inputBuffer[index].setValue(line);
 						break;
 					}
@@ -105,19 +113,21 @@ public class Sort {
 			}
 			// 判断是否外部子文件都被读完
 			if (i >= LIST_NUMBER) { // 此时仅剩输入缓冲区中的记录,直接排序，写到文件
-				Arrays.sort(inputBuffer);
+//				Arrays.sort(inputBuffer);
+				quickSort(inputBuffer, 0, inputBuffer.length - 1);
 				for (int j = 1; j < LIST_NUMBER; j++) {
 					copy(outputBuffer[BLOCK_SIZE - LIST_NUMBER + j], inputBuffer[j]);
 					count++;
 					total++;
 				}
-				writeFile(outFile);
+				writeResult(bout);
 			}
 		}
 		// 关闭bufferReader
 		for (int k = 0; k < LIST_NUMBER; k++) {
 			br[k].close();
 		}
+		bout.close(); // 关闭bufferWriter
 		long end = System.currentTimeMillis();
 		System.out.printf("Merge time: %d ms\n", end - start);
 	}
@@ -157,7 +167,7 @@ public class Sort {
 	 */
 	private static void writeFile(String path) {
 		try {
-			FileOutputStream out = new FileOutputStream(new File(path), true);
+			FileOutputStream out = new FileOutputStream(new File(path), false);	//子文件采用覆盖方式写入
 			BufferedOutputStream bout = new BufferedOutputStream(out);
 			for (int j = 0; j < BLOCK_SIZE; j++) {
 				bout.write((outputBuffer[j].toString() + "\n").getBytes());
@@ -166,6 +176,71 @@ public class Sort {
 			bout.close();
 		} catch (IOException e) {
 			e.printStackTrace();
+		}
+	}
+
+	/**
+	 * 将输出缓冲区写入结果文件
+	 * 
+	 * @param bout
+	 */
+	private static void writeResult(BufferedOutputStream bout) {
+		try {
+			for (int j = 0; j < BLOCK_SIZE; j++) {
+				bout.write((outputBuffer[j].toString() + "\n").getBytes());
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+	}
+
+	/**
+	 * 快排
+	 * 
+	 * @param data
+	 * @param l
+	 * @param r
+	 */
+	private static void quickSort(Record[] data, int l, int r) {
+		if (r <= l) {
+			return;
+		}
+		int i = l;
+		int j = r;
+		Record key = data[l];
+		while (j > i) {
+			while (j > i && data[j].compareTo(key) >= 0) {
+				j--;
+			}
+			data[i] = data[j];
+			while (i < j && data[i].compareTo(key) <= 0) {
+				i++;
+			}
+			data[j] = data[i];
+		}
+		data[i] = key;
+		quickSort(data, l, i - 1);
+		quickSort(data, i + 1, r);
+	}
+
+	/**
+	 * 快排测试
+	 * 
+	 */
+	private static void testQuickSort() {
+		int[] key = new int[] { 12, 20, 5, 16, 15, 1, 30, 45 };
+		Record[] data = new Record[8];
+		for (int i = 0; i < 8; i++) {
+			data[i] = new Record(key[i], "" + i);
+		}
+		for (int i = 0; i < 8; i++) {
+			System.out.println(data[i]);
+		}
+		System.out.println("-----------------");
+		quickSort(data, 0, data.length - 1);
+		for (int i = 0; i < 8; i++) {
+			System.out.println(data[i]);
 		}
 	}
 }
